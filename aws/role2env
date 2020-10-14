@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+
+import sys
+import json
+
+#usage
+#aws sts assume-role --role-arn arn:aws:iam::... --role-session-name abc | role2env
+#then copy and paste the output to cmd line
+
+role = json.loads(sys.stdin.read())
+creds = role["Credentials"]
+key, secret, token = (creds[k] for k in ("AccessKeyId", "SecretAccessKey", "SessionToken"))
+exp_key=f'export AWS_ACCESS_KEY_ID="{key}"'
+exp_sec=f'export AWS_SECRET_ACCESS_KEY="{secret}"'
+exp_tok=f'export AWS_SESSION_TOKEN="{token}"'
+together='\n'.join((exp_key, exp_sec, exp_tok))
+print(together)
