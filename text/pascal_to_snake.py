@@ -10,4 +10,4 @@ for c in pascal:
         with_spaces.append(c.lower())
     else:
         with_spaces.append(c)
-print(''.join(with_spaces[1:]))
+print(''.join(with_spaces[1:]), end='')
