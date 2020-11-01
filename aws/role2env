@@ -8,10 +8,27 @@ import json
 #then copy and paste the output to cmd line
 
 role = json.loads(sys.stdin.read())
-creds = role["Credentials"]
-key, secret, token = (creds[k] for k in ("AccessKeyId", "SecretAccessKey", "SessionToken"))
-exp_key=f'export AWS_ACCESS_KEY_ID="{key}"'
-exp_sec=f'export AWS_SECRET_ACCESS_KEY="{secret}"'
-exp_tok=f'export AWS_SESSION_TOKEN="{token}"'
-together='\n'.join((exp_key, exp_sec, exp_tok))
+
+def find_credentials_node(node):
+    if isinstance(node, dict):
+        if "AccessKeyId" in node:
+            return node
+        for key in node:
+            found = find_credentials_node(node[key])
+            if found:
+                return found
+
+creds = find_credentials_node(role)
+if not creds:
+    raise Exception("failed to find node containing credentials")
+
+key, secret, token = (creds.get(k) for k in ("AccessKeyId", "SecretAccessKey", "SessionToken"))
+if not token:
+    token = creds.get("Token")
+exports=[]
+exports.append(f'export AWS_ACCESS_KEY_ID="{key}"')
+exports.append(f'export AWS_SECRET_ACCESS_KEY="{secret}"')
+if token:
+    exports.append(f'export AWS_SESSION_TOKEN="{token}"')
+together='\n'.join(exports)
 print(together)
