@@ -13,7 +13,7 @@ def run(command: str) -> Tuple[str, str]:
     return out, err
 
 def dns_configured() -> bool:
-    return os.system("cat /etc/resolv.conf | grep nameserver | grep -v 10.0.0.138") == 0
+    return os.system("cat /etc/resolv.conf | grep nameserver | grep -v 10.0.2.2") == 0
 
 def pgrep(pattern: str) -> Set[int]:
     pids = run("pgrep dhclient")[0].splitlines()
