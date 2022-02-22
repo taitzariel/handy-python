@@ -13,7 +13,9 @@ def run(command: str) -> Tuple[str, str]:
     return out, err
 
 def dns_configured() -> bool:
-    return os.system("cat /etc/resolv.conf | grep nameserver | grep -v 10.0.2.2") == 0
+    lines = subprocess.check_output("cat /etc/resolv.conf | grep nameserver", shell=True, text=True).splitlines()
+    addresses = [line.split()[-1] for line in lines]
+    return any(add for add in addresses if not add.startswith('10.'))
 
 def pgrep(pattern: str) -> Set[int]:
     pids = run("pgrep dhclient")[0].splitlines()
