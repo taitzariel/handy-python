@@ -22,3 +22,5 @@ for line in sys.stdin:
             duration += quantity * units[unit]
             break
 print(duration)
+print(f"that's about {duration.days / 5} weeks")
+print(f"that's about {duration.days / 22} months")
