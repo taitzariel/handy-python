@@ -24,12 +24,12 @@ def pgrep(pattern: str) -> Set[int]:
 def restart_dns() -> None:
     original_pids = pgrep("dhclient")
     print(f"original pids {original_pids}")
+    run("sudo dhclient -r")
     run("sudo dhclient")
     current_pids = pgrep("dhclient")
     new_pids = {pid for pid in current_pids if pid not in original_pids}
     print(f"new pids {new_pids}")
     assert len(new_pids) == 1, "expected only one new dhclient process"
-    run(f"sudo kill {next(iter(new_pids))}")
 
 def main(force: bool) -> None:
     if force:
