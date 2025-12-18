@@ -1,0 +1,77 @@
+#!/usr/bin/python3
+
+import sys
+
+
+def pretty_print_dict_str(dict_str: str, indent_size: int = 4) -> str:
+    """
+    Pretty print a string representation of a Python dict or object.
+
+    Args:
+        dict_str: String representation (e.g., from str(my_dict))
+        indent_size: Number of spaces per indentation level
+
+    Returns:
+        Formatted string with proper indentation and line breaks
+    """
+    result = []
+    indent_level = 0
+    in_string = False
+    string_char = None
+    i = 0
+
+    while i < len(dict_str):
+        char = dict_str[i]
+
+        if not in_string:
+            if char in ('"', "'"):
+                in_string = True
+                string_char = char
+                result.append(char)
+            elif char in ("{", "[", "("):
+                result.append(char)
+                indent_level += 1
+                if i + 1 < len(dict_str) and dict_str[i + 1] not in ("}", "]", ")"):
+                    result.append("\n")
+                    result.append(" " * (indent_level * indent_size))
+            elif char in ("}", "]", ")"):
+                indent_level -= 1
+                if result and result[-1] != "\n":
+                    result.append("\n")
+                    result.append(" " * (indent_level * indent_size))
+                result.append(char)
+            elif char == ",":
+                result.append(char)
+                if i + 1 < len(dict_str) and dict_str[i + 1] == " ":
+                    i += 1
+                result.append("\n")
+                result.append(" " * (indent_level * indent_size))
+            elif char == " " and result and result[-1] in ("\n", " "):
+                pass
+            else:
+                result.append(char)
+        else:
+            result.append(char)
+            if char == string_char and (i == 0 or dict_str[i - 1] != "\\"):
+                in_string = False
+                string_char = None
+
+        i += 1
+
+    return "".join(result)
+
+
+def dprint(line: str) -> None:
+    """
+    Pretty print a line containing dict representation.
+
+    Args:
+        line: String containing dict/object representation
+    """
+    formatted = pretty_print_dict_str(line.strip())
+    print(formatted)
+
+
+if __name__ == "__main__":
+    for line in sys.stdin:
+        dprint(line)
