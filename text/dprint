@@ -112,5 +112,5 @@ def dprint(line: str) -> None:
 
 
 if __name__ == "__main__":
-    for line in sys.stdin:
-        dprint(line)
+    full_input = sys.stdin.read()
+    dprint(full_input)
