@@ -5,7 +5,7 @@
 
 import sys
 
-pascal = sys.argv[1]
+pascal = sys.stdin.read().strip()
 chars = [pascal[0].lower()]
 for c in pascal[1:]:
     if c.isupper():

@@ -2,5 +2,5 @@
 
 import sys
 
-snake = sys.argv[1]
+snake = sys.stdin.read().strip()
 print(snake.title().replace('_',''), end='')
