@@ -67,18 +67,19 @@ def pretty_print_dict_str(dict_str: str, indent_size: int = 4) -> str:
                 string_char = char
                 result.append(char)
             elif char in ("{", "[", "("):
-                result.append(char)
-                if i + 1 < len(cleaned) and cleaned[i + 1] not in ("}", "]", ")"):
+                if i + 1 < len(cleaned) and cleaned[i + 1] in ("}", "]", ")"):
+                    result.append(char)
+                    result.append(cleaned[i + 1])
+                    i += 1
+                else:
+                    result.append(char)
                     indent_level += 1
                     result.append("\n")
                     result.append(" " * (indent_level * indent_size))
             elif char in ("}", "]", ")"):
-                if result and result[-1] != " ":
-                    indent_level -= 1
-                    result.append("\n")
-                    result.append(" " * (indent_level * indent_size))
-                else:
-                    indent_level -= 1
+                indent_level -= 1
+                result.append("\n")
+                result.append(" " * (indent_level * indent_size))
                 result.append(char)
             elif char == ",":
                 result.append(char)
