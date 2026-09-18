@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""
+Usage: hours < timesheet.txt
+
+Reads a Hebrew-calendar work log from stdin and prints a summary table to stdout.
+
+Input format — each day starts with a header line, followed by log entries.
+The last parenthesized value in a day's entries is taken as total hours worked.
+Arithmetic like (9:50 -:20 = 9:30) is supported; the value after the last '=' is used.
+
+    elul 11 (sheni)
+    10   email, slack
+    12   lunch
+    1305
+      30 team sync
+    1830 (8:30 -:35 = 7:55)
+
+    elul 12 (shlishi)
+    10   email, slack
+    18   (8 -:15 = 7:45)
+
+Output:
+
+    | day                | worked | expected | beyond |
+    | ------------------ | ------ | -------- | ------ |
+    | elul 11 (sheni)    | 7:55   | 9:00     | -1:05  |
+    | elul 12 (shlishi)  | 7:45   | 9:00     | -1:15  |
+
+    total beyond: -2:20
+"""
+import re
+import sys
+from datetime import timedelta
+from dataclasses import dataclass
+
+HAGIM = {
+    ("nisan", 15),
+    ("nisan", 21),
+    ("iyar", 5),
+    ("sivan", 5),
+    ("tishrei", 1),
+    ("tishrei", 2),
+    ("tishrei", 10),
+    ("tishrei", 15),
+    ("tishrei", 22),
+}
+
+EREV_HAG = {
+    ("nisan", 14),
+    ("nisan", 20),
+    ("iyar", 4),
+    ("sivan", 4),
+    ("elul", 29),
+    ("tishrei", 9),
+    ("tishrei", 14),
+    ("tishrei", 21),
+}
+
+EXPECTED_BY_DOW = {
+    "rishon": timedelta(hours=9),
+    "sheni": timedelta(hours=9),
+    "shlishi": timedelta(hours=9),
+    "rvii": timedelta(hours=9),
+    "hamishi": timedelta(hours=9),
+    "shishi": timedelta(),
+}
+
+EREV_HAG_EXPECTED = timedelta(hours=4, minutes=30)
+
+_HEADER_RE = re.compile(r"^([a-z]+ \d+) \((\w+)\)")
+_TIME_RE = re.compile(r"(\d{1,2})(?::(\d{2}))?")
+
+
+@dataclass
+class Day:
+    label: str
+    month: str
+    day_num: int
+    dow: str
+    lines: list[str]
+
+
+def _format_td(td: timedelta) -> str:
+    total = int(td.total_seconds())
+    sign = "-" if total < 0 else ""
+    total = abs(total)
+    return f"{sign}{total // 3600}:{(total % 3600) // 60:02d}"
+
+
+def _parse_worked(text: str) -> timedelta | None:
+    if "=" in text:
+        text = text.split("=")[-1]
+    m = _TIME_RE.search(text)
+    if not m:
+        return None
+    return timedelta(hours=int(m.group(1)), minutes=int(m.group(2) or 0))
+
+
+def _extract_worked(day: Day) -> timedelta:
+    for line in reversed(day.lines):
+        for paren_content in reversed(re.findall(r"\(([^)]+)\)", line)):
+            worked = _parse_worked(paren_content)
+            if worked is not None:
+                return worked
+    return timedelta()
+
+
+def _expected_hours(day: Day) -> timedelta:
+    if (day.month, day.day_num) in HAGIM:
+        return timedelta()
+    if (day.month, day.day_num) in EREV_HAG:
+        return EREV_HAG_EXPECTED
+    return EXPECTED_BY_DOW.get(day.dow, timedelta(hours=9))
+
+
+def _parse_days(lines: list[str]) -> list[Day]:
+    days: list[Day] = []
+    current: Day | None = None
+
+    for line in lines:
+        m = _HEADER_RE.match(line.strip())
+        if m:
+            header = m.group(1)
+            month, day_num_str = header.rsplit(" ", 1)
+            current = Day(
+                label=header,
+                month=month,
+                day_num=int(day_num_str),
+                dow=m.group(2),
+                lines=[],
+            )
+            days.append(current)
+        elif current is not None:
+            current.lines.append(line)
+
+    return days
+
+
+def _print_table(rows: list[tuple[str, ...]], headers: tuple[str, ...]) -> None:
+    widths = [max(len(h), *(len(r[i]) for r in rows)) for i, h in enumerate(headers)]
+
+    def format_row(cells: tuple[str, ...]) -> str:
+        return "| " + " | ".join(c.ljust(w) for c, w in zip(cells, widths)) + " |"
+
+    print(format_row(headers))
+    print("| " + " | ".join("-" * w for w in widths) + " |")
+    for row in rows:
+        print(format_row(row))
+
+
+def main() -> None:
+    days = _parse_days(sys.stdin.read().splitlines())
+
+    rows: list[tuple[str, ...]] = []
+    total_beyond = timedelta()
+
+    for day in days:
+        worked = _extract_worked(day)
+        expected = _expected_hours(day)
+        beyond = worked - expected
+        total_beyond += beyond
+        rows.append((
+            f"{day.label} ({day.dow})",
+            _format_td(worked),
+            _format_td(expected),
+            _format_td(beyond),
+        ))
+
+    if not rows:
+        return
+
+    _print_table(rows, ("day", "worked", "expected", "beyond"))
+    print()
+    print(f"total beyond: {_format_td(total_beyond)}")
+
+
+if __name__ == "__main__":
+    main()
